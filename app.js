@@ -4,7 +4,11 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const ejs = require('ejs');
 const mongoose = require('mongoose');
-const md5 = require('md5'); // used to hash the passwords
+const bcrypt = require('bcrypt'); // used to hash the passwords
+const saltRounds = 15;
+// the password is being "salted" by rehashing the hash password with a random number for a given number of times.
+// the higher the salting rounds, the better hash and higher decryption time (exponentially higher)
+
 
 const app = express();
 
@@ -46,34 +50,41 @@ app.get('/register', function (req, res) {
 });
 
 app.post("/register", function (req, res) {
-    const newUser = new User({
-        email: req.body.username,
-        password: md5(req.body.password)    //? md5 is used to hash password
+    bcrypt.hash(req.body.password, saltRounds, function (err, finalHash) {
+        const newUser = new User({
+            email: req.body.username,
+            password: finalHash
+        });
+        console.log(req.body.username, finalHash);
+        newUser.save(function (err) {   // the password is being *encrypted* when calling this function
+            if (err) {
+                console.log(err);
+            } else {
+                res.render("secrets")
+            }
+        })
     });
-    console.log(req.body.username, req.body.password);
-    newUser.save(function (err) {   // the password is being *encrypted* when calling this function
-        if (err) {
-            console.log(err);
-        } else {
-            res.render("secrets")
-        }
-    })
+
 });
 
 
 app.post("/login", function (req, res) {
     const username = req.body.username;
-    const password = md5(req.body.password);
+    const password = req.body.password;
     //? we cant unhash the password, so instead we will hash the password provided in the POST request
     User.findOne({ email: username }, function (err, foundUser) {
         if (err) {
             console.log(err);
         } else {
             if (foundUser) {  // if  a user is found
-                if (foundUser.password === password) {
-                    res.render("secrets");
-                } else { res.send("Wrong Password!") };
-            } else { res.send("User not found, please check the provided Email Address") }
+                bcrypt.compare(password, foundUser.password, function (err, result) {
+                    if (result === true) {
+                        res.render("secrets");
+                    } else { res.send("Wrong Password!") };
+                });
+            } else {
+                res.send("User not found, please check the provided Email Address")
+            };
         };
     });
 });
