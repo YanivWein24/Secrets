@@ -4,11 +4,13 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const ejs = require('ejs');
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt'); // used to hash the passwords
-const saltRounds = 15;
-// the password is being "salted" by rehashing the hash password with a random number for a given number of times.
-// the higher the salting rounds, the better hash and higher decryption time (exponentially higher)
+const session = require('express-session');
+const passport = require('passport');
+const passportLocalMongoose = require('passport-local-mongoose');
 
+//* in this version we use "express-session" to create a cookie every time a user is registed or logged in.
+//* this cookie will authenticate the user everytime its neceserry, and then the cookie will be destroyed after
+//* closing the browser or logging out (when the session is over).
 
 const app = express();
 
@@ -20,22 +22,37 @@ app.use(bodyParser.urlencoded({
     extended: true
 }));
 
+//! the order is very important!
+
+app.use(session({    //? using express-session
+    secret: 'A long string which is the secret key.', // just set as a long string
+    resave: false, // default
+    saveUninitialized: true,  // default
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+
 mongoose.connect("mongodb://localhost:27017/userDB", { useNewUrlParser: true });
 
 
 const userSchema = new mongoose.Schema({
     email: {
         type: String,
-        required: true
+        unique: true
     },
-    password: {
-        type: String,
-        required: true
-    },
+    password: String,
 });
 
+userSchema.plugin(passportLocalMongoose);
 
 const User = mongoose.model('User', userSchema);
+
+passport.use(User.createStrategy());
+
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
 
 app.get('/', function (req, res) {
     res.render("home"); // refers to home.ejs
@@ -49,45 +66,52 @@ app.get('/register', function (req, res) {
     res.render("register"); // refers to register.ejs
 });
 
-app.post("/register", function (req, res) {
-    bcrypt.hash(req.body.password, saltRounds, function (err, finalHash) {
-        const newUser = new User({
-            email: req.body.username,
-            password: finalHash
-        });
-        console.log(req.body.username, finalHash);
-        newUser.save(function (err) {   // the password is being *encrypted* when calling this function
-            if (err) {
-                console.log(err);
-            } else {
-                res.render("secrets")
-            }
-        })
-    });
+app.get('/secrets', function (req, res) {
+    //? if a user tries to get to "/secrets" without being authenticated or after deleting the cookie,
+    //? they will be redirected to the login page in order to authenticate.
+    if (req.isAuthenticated()) {
+        res.render("secrets"); // refers to secrets.ejs
+    } else {
+        res.redirect("/login"); // refers to login.ejs if the request is not authenticated
+    }
+});
 
+app.get("/logout", function (req, res) {
+    req.logout();  // pasport.js method
+    res.redirect("/");
+});
+
+app.post("/register", function (req, res) {
+    User.register({ email: req.body.username, username: req.body.username }, req.body.password, function (err, user) {
+        if (err) {
+            console.log(err);
+            res.redirect("/register");
+        } else {
+            passport.authenticate("local")(req, res, function () {
+                res.redirect("/secrets")
+            });
+        }
+    });
 });
 
 
 app.post("/login", function (req, res) {
-    const username = req.body.username;
-    const password = req.body.password;
-    //? we cant unhash the password, so instead we will hash the password provided in the POST request
-    User.findOne({ email: username }, function (err, foundUser) {
+    const user = new User({
+        username: req.body.username,
+        password: req.body.password
+    });
+    req.login(user, function (err) {  // pasport.js method
         if (err) {
             console.log(err);
         } else {
-            if (foundUser) {  // if  a user is found
-                bcrypt.compare(password, foundUser.password, function (err, result) {
-                    if (result === true) {
-                        res.render("secrets");
-                    } else { res.send("Wrong Password!") };
-                });
-            } else {
-                res.send("User not found, please check the provided Email Address")
-            };
-        };
+            passport.authenticate("local")(req, res, function () {
+                res.redirect("/secrets")
+            });
+        }
     });
 });
+
+
 
 const PORT = process.env.PORT || 3000;
 
