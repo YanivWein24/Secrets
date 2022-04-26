@@ -1,11 +1,10 @@
-//  npm i express body-parser
 require('dotenv').config();
 // need to require this package as early as possible, then create a hidden file called ".env"
 const express = require('express');
 const bodyParser = require('body-parser');
 const ejs = require('ejs');
 const mongoose = require('mongoose');
-const encrypt = require('mongoose-encryption');
+const md5 = require('md5'); // used to hash the passwords
 
 const app = express();
 
@@ -31,15 +30,6 @@ const userSchema = new mongoose.Schema({
     },
 });
 
-//? encrypt the password field:
-const secret = process.env.SECRET;
-// instead of writing the secret in a "string" format, we used dotenv to move it to an hidden file, and now we can
-// fetch the secret from the hidden file we created and configured
-userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password'] });
-//* the document will be encrypted when calling "save" method, and decrypted when calling "find" method.
-// the "plugin" method allows us to add extra functionality for the Schema
-// if we want to encrypt more fields, we can add them after "password" inside the array.  
-
 
 const User = mongoose.model('User', userSchema);
 
@@ -58,7 +48,7 @@ app.get('/register', function (req, res) {
 app.post("/register", function (req, res) {
     const newUser = new User({
         email: req.body.username,
-        password: req.body.password
+        password: md5(req.body.password)    //? md5 is used to hash password
     });
     console.log(req.body.username, req.body.password);
     newUser.save(function (err) {   // the password is being *encrypted* when calling this function
@@ -73,9 +63,9 @@ app.post("/register", function (req, res) {
 
 app.post("/login", function (req, res) {
     const username = req.body.username;
-    const password = req.body.password;
+    const password = md5(req.body.password);
+    //? we cant unhash the password, so instead we will hash the password provided in the POST request
     User.findOne({ email: username }, function (err, foundUser) {
-        // the password is being *decrypted* when calling this function
         if (err) {
             console.log(err);
         } else {
