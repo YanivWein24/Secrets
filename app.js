@@ -8,6 +8,7 @@ const session = require('express-session');
 const passport = require('passport');
 const passportLocalMongoose = require('passport-local-mongoose');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const FacebookStrategy = require('passport-facebook').Strategy;
 const findOrCreate = require('mongoose-findorcreate');
 
 //* in this version we use "express-session" to create a cookie every time a user is registed or logged in.
@@ -84,6 +85,20 @@ passport.use(new GoogleStrategy({
     }
 ));
 
+passport.use(new FacebookStrategy({
+    clientID: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/facebook/secrets"
+},
+    function (accessToken, refreshToken, profile, cb) {
+        console.log(profile);
+        User.findOrCreate({ facebookId: profile.id }, function (err, user) {
+            if (err) { console.log(err) }
+            return cb(err, user);
+        });
+    }
+));
+
 app.get('/', function (req, res) {
     res.render("home"); // refers to home.ejs
 });
@@ -92,9 +107,21 @@ app.get('/auth/google',
     passport.authenticate("google", { scope: ["profile"] })
 );
 
+app.get('/auth/facebook',
+    passport.authenticate('facebook'));
+
+
 // redirect from google:
 app.get('/auth/google/secrets',
     passport.authenticate('google', { failureRedirect: '/login' }), // redirect to "/login" if not successful
+    function (req, res) {
+        // Successful authentication, redirect to "secrets".
+        res.redirect('/secrets');
+    });
+
+// redirect from facebook:
+app.get('/auth/facebook/secrets',
+    passport.authenticate('facebook', { failureRedirect: '/login' }), // redirect to "/login" if not successful
     function (req, res) {
         // Successful authentication, redirect to "secrets".
         res.redirect('/secrets');
