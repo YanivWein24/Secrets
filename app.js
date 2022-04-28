@@ -48,7 +48,8 @@ const userSchema = new mongoose.Schema({
     },
     password: String,
     googleID: String,
-    facebookID: String
+    facebookID: String,
+    secret: String
 
 });
 
@@ -143,13 +144,46 @@ app.get('/register', function (req, res) {
 });
 
 app.get('/secrets', function (req, res) {
+    User.find({ "secret": { $ne: null } }, function (err, foundUser) {
+        // look for a user with a "secret" field which is not equal to 'null'
+        if (err) {
+            console.log(err);
+        } else {
+            if (foundUser) {
+                res.render("secrets", { usersWithSecret: foundUser })
+            }
+        }
+    });
+});
+
+app.get('/submit', function (req, res) {
     //? if a user tries to get to "/secrets" without being authenticated or after deleting the cookie,
     //? they will be redirected to the login page in order to authenticate.
     if (req.isAuthenticated()) {
-        res.render("secrets"); // refers to secrets.ejs
+        res.render("submit");
     } else {
-        res.redirect("/login"); // refers to login.ejs if the request is not authenticated
+        res.redirect("/login");
     }
+});
+
+app.post('/submit', function (req, res) {
+    const submittedSecret = req.body.secret;
+    console.log(req.user.id);
+    console.log(req.body.secret);
+
+    User.findById(req.user.id, function (err, foundUser) {
+        if (err) {
+            console.log(err);
+        } else {
+            if (foundUser) {
+                console.log(foundUser);
+                foundUser.secret = submittedSecret;
+                foundUser.save(function () {
+                    res.redirect("/secrets");
+                });
+            }
+        }
+    })
 });
 
 app.get("/logout", function (req, res) {
