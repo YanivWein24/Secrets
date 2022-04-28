@@ -8,7 +8,9 @@ const session = require('express-session');
 const passport = require('passport');
 const passportLocalMongoose = require('passport-local-mongoose');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const FacebookStrategy = require('passport-facebook').Strategy;
 const findOrCreate = require('mongoose-findorcreate');
+
 
 //* in this version we use "express-session" to create a cookie every time a user is registed or logged in.
 //* this cookie will authenticate the user everytime its neceserry, and then the cookie will be destroyed after
@@ -42,10 +44,12 @@ mongoose.connect("mongodb://localhost:27017/userDB", { useNewUrlParser: true });
 const userSchema = new mongoose.Schema({
     email: {
         type: String,
-        unique: true
+        unique: true,
     },
     password: String,
-    googleID: String
+    googleID: String,
+    facebookID: String
+
 });
 
 userSchema.plugin(passportLocalMongoose);
@@ -67,6 +71,7 @@ passport.deserializeUser(function (id, done) {
 
 //! the order is very important!
 
+// https://www.passportjs.org/packages/passport-google-oauth20/ 
 passport.use(new GoogleStrategy({
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
@@ -75,9 +80,23 @@ passport.use(new GoogleStrategy({
 },
     function (accessToken, refreshToken, profile, cb) {
         console.log(profile); // the user profile JSON we get from google 
-        User.findOrCreate({ googleID: profile.id }, function (err, user) {
+        User.findOrCreate({ googleID: profile.id, email: profile._json.name }, function (err, user) {
             //? "findOrCreate" is not a mongoose function,we need to require it.
             //? we can search for: "mongoose-findorcreate" in NPM and require this package to the project
+            if (err) { console.log(err) }
+            return cb(err, user);
+        });
+    }
+));
+
+// https://www.passportjs.org/packages/passport-facebook/
+passport.use(new FacebookStrategy({
+    clientID: process.env.APP_ID,
+    clientSecret: process.env.APP_SECRET,
+    callbackURL: "http://localhost:3000/auth/facebook/secrets"
+},
+    function (accessToken, refreshToken, profile, cb) {
+        User.findOrCreate({ facebookID: profile.id, email: profile._json.name }, function (err, user) {
             if (err) { console.log(err) }
             return cb(err, user);
         });
@@ -92,9 +111,21 @@ app.get('/auth/google',
     passport.authenticate("google", { scope: ["profile"] })
 );
 
+app.get('/auth/facebook',
+    passport.authenticate('facebook', { scope: 'public_profile,email' }));
+
+
 // redirect from google:
 app.get('/auth/google/secrets',
     passport.authenticate('google', { failureRedirect: '/login' }), // redirect to "/login" if not successful
+    function (req, res) {
+        // Successful authentication, redirect to "secrets".
+        res.redirect('/secrets');
+    });
+
+// redirect from facebook:
+app.get('/auth/facebook/secrets',
+    passport.authenticate('facebook', { failureRedirect: '/login' }), // redirect to "/login" if not successful
     function (req, res) {
         // Successful authentication, redirect to "secrets".
         res.redirect('/secrets');
