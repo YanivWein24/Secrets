@@ -11,6 +11,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const findOrCreate = require('mongoose-findorcreate');
 
+
 //* in this version we use "express-session" to create a cookie every time a user is registed or logged in.
 //* this cookie will authenticate the user everytime its neceserry, and then the cookie will be destroyed after
 //* closing the browser or logging out (when the session is over).
@@ -70,6 +71,7 @@ passport.deserializeUser(function (id, done) {
 
 //! the order is very important!
 
+// https://www.passportjs.org/packages/passport-google-oauth20/ 
 passport.use(new GoogleStrategy({
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
@@ -78,7 +80,7 @@ passport.use(new GoogleStrategy({
 },
     function (accessToken, refreshToken, profile, cb) {
         console.log(profile); // the user profile JSON we get from google 
-        User.findOrCreate({ googleID: profile.id }, function (err, user) {
+        User.findOrCreate({ googleID: profile.id, email: profile._json.name }, function (err, user) {
             //? "findOrCreate" is not a mongoose function,we need to require it.
             //? we can search for: "mongoose-findorcreate" in NPM and require this package to the project
             if (err) { console.log(err) }
@@ -87,14 +89,14 @@ passport.use(new GoogleStrategy({
     }
 ));
 
+// https://www.passportjs.org/packages/passport-facebook/
 passport.use(new FacebookStrategy({
     clientID: process.env.APP_ID,
     clientSecret: process.env.APP_SECRET,
     callbackURL: "http://localhost:3000/auth/facebook/secrets"
 },
     function (accessToken, refreshToken, profile, cb) {
-        console.log(profile); // the user profile JSON we get from google 
-        User.findOrCreate({ facebookID: profile.id }, function (err, user) {
+        User.findOrCreate({ facebookID: profile.id, email: profile._json.name }, function (err, user) {
             if (err) { console.log(err) }
             return cb(err, user);
         });
