@@ -79,8 +79,9 @@ passport.use(new GoogleStrategy({
     // userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"    //? change this is case of deprecation
 },
     function (accessToken, refreshToken, profile, cb) {
-        console.log(profile); // the user profile JSON we get from google 
-        User.findOrCreate({ googleID: profile.id, email: profile._json.name }, function (err, user) {
+        // console.log(profile); // the user profile JSON we get from google 
+        // console.log(profile.emails[0].value);
+        User.findOrCreate({ googleID: profile.id, email: "g-" + profile.emails[0].value }, function (err, user) {
             //? "findOrCreate" is not a mongoose function,we need to require it.
             //? we can search for: "mongoose-findorcreate" in NPM and require this package to the project
             if (err) { console.log(err) }
@@ -93,10 +94,12 @@ passport.use(new GoogleStrategy({
 passport.use(new FacebookStrategy({
     clientID: process.env.APP_ID,
     clientSecret: process.env.APP_SECRET,
-    callbackURL: "http://localhost:3000/auth/facebook/secrets"
+    callbackURL: "http://localhost:3000/auth/facebook/secrets",
+    profileFields: ['id', 'emails', 'name']
 },
     function (accessToken, refreshToken, profile, cb) {
-        User.findOrCreate({ facebookID: profile.id, email: profile._json.name }, function (err, user) {
+        console.log(profile.emails, profile.emails[0].value);
+        User.findOrCreate({ facebookID: profile.id, email: "f-" + profile.emails[0].value }, function (err, user) {
             if (err) { console.log(err) }
             return cb(err, user);
         });
@@ -108,11 +111,11 @@ app.get('/', function (req, res) {
 });
 
 app.get('/auth/google',
-    passport.authenticate("google", { scope: ["profile"] })
+    passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
 app.get('/auth/facebook',
-    passport.authenticate('facebook', { scope: 'public_profile,email' }));
+    passport.authenticate('facebook', { scope: ['public_profile', 'email'] }));
 
 
 // redirect from google:
@@ -156,7 +159,10 @@ app.get("/logout", function (req, res) {
 
 app.post("/register", function (req, res) {
     User.register({ email: req.body.username, username: req.body.username }, req.body.password, function (err, user) {
-        if (err) {
+        if (User.findOne({ email: req.body.username })) {
+            res.send("This Email is already registered!");
+        }
+        else if (err) {
             console.log(err);
             res.redirect("/register");
         } else {
