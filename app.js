@@ -43,10 +43,12 @@ mongoose.connect("mongodb://localhost:27017/userDB", { useNewUrlParser: true });
 const userSchema = new mongoose.Schema({
     email: {
         type: String,
-        unique: true
+        unique: true,
     },
     password: String,
-    googleID: String
+    googleID: String,
+    facebookID: String
+
 });
 
 userSchema.plugin(passportLocalMongoose);
@@ -86,13 +88,13 @@ passport.use(new GoogleStrategy({
 ));
 
 passport.use(new FacebookStrategy({
-    clientID: process.env.CLIENT_ID,
-    clientSecret: process.env.CLIENT_SECRET,
+    clientID: process.env.APP_ID,
+    clientSecret: process.env.APP_SECRET,
     callbackURL: "http://localhost:3000/auth/facebook/secrets"
 },
     function (accessToken, refreshToken, profile, cb) {
-        console.log(profile);
-        User.findOrCreate({ facebookId: profile.id }, function (err, user) {
+        console.log(profile); // the user profile JSON we get from google 
+        User.findOrCreate({ facebookID: profile.id }, function (err, user) {
             if (err) { console.log(err) }
             return cb(err, user);
         });
@@ -108,7 +110,7 @@ app.get('/auth/google',
 );
 
 app.get('/auth/facebook',
-    passport.authenticate('facebook'));
+    passport.authenticate('facebook', { scope: 'public_profile,email' }));
 
 
 // redirect from google:
