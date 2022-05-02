@@ -12,8 +12,8 @@ const FacebookStrategy = require('passport-facebook').Strategy;
 const findOrCreate = require('mongoose-findorcreate');
 
 
-//* in this version we use "express-session" to create a cookie every time a user is registed or logged in.
-//* this cookie will authenticate the user everytime its neceserry, and then the cookie will be destroyed after
+//* in this version we use "express-session" to create a cookie every time a user is registered or logged in.
+//* this cookie will authenticate the user every time its necessary, and then the cookie will be destroyed after
 //* closing the browser or logging out (when the session is over).
 
 const app = express();
@@ -84,7 +84,7 @@ passport.use(new GoogleStrategy({
         // console.log(profile.emails[0].value);
         User.findOrCreate({ googleID: profile.id, email: "g-" + profile.emails[0].value }, function (err, user) {
             //? "findOrCreate" is not a mongoose function,we need to require it.
-            //? we can search for: "mongoose-findorcreate" in NPM and require this package to the project
+            //? we can search for: "mongoose-findorcreate" in NPM and require this package to the project 
             if (err) { console.log(err) }
             return cb(err, user);
         });
@@ -187,7 +187,7 @@ app.post('/submit', function (req, res) {
 });
 
 app.get("/logout", function (req, res) {
-    req.logout();  // pasport.js method
+    req.logout();  // passport.js method
     res.redirect("/");
 });
 
@@ -213,7 +213,7 @@ app.post("/login", function (req, res) {
         username: req.body.username,
         password: req.body.password
     });
-    req.login(user, function (err) {  // pasport.js method
+    req.login(user, function (err) {  // passport.js method
         if (err) {
             console.log(err);
         } else {
