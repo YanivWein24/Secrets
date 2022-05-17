@@ -6,12 +6,12 @@
 * MongoDB
 * Download the code or clone it to your local repository.
 * `npm install` all dependencies from `package.json`.
-* Add `APP_ID` and `APP_SECRET` to access Oauth for Google and Facebook Login
+* (optionary) Add your own `APP_ID` and `APP_SECRET` to access Oauth for Google and Facebook Login
 * Run `app.js` on a local node server (default PORT number: 3000).  
 
 ## Changing PORT number:
-On the bottom of `app.js` there's a const called `PORT`.  
-Inside the declaration of that const there's the default port number - 3000.  
+On the bottom of `app.js` there's a constant called `PORT`.  
+Inside the declaration of that constant there's the default port number - 3000.  
 To change the port number, simply remove the default port number and insert your preferred one instead.
 ``` diff
 - const PORT = process.env.PORT || 3000;
@@ -20,11 +20,11 @@ To change the port number, simply remove the default port number and insert your
 <br>   
 
 ## **Go back to previous commits to check for various authentication methods:**  
-* Database Encryption
-* Hashing
-* Salting (using bcrypt)
-* Cookies and sessions
-* Oauth 2.0
+* Database Encryption - Commit ID: 07f500c133fd17a729f849b1f3c04ede00cf44f7
+* Hashing - Commit ID: 3d144d2b73f63c606ddb3890044a66d3f203d23d
+* Salting (using bcrypt)  - Commit ID: 12406c849934ab512a2285bb18ce4c495c977273
+* Cookies and sessions  - Commit ID: e1d5e97befc4eb3c155f74e79af94be39b9952d6
+* Oauth 2.0  - Commit ID: 5e6c5cad2bf05132215bd6e4724d8c1713f76b4f (Or Above)
 <br>
 
 ## *Screenshots :*
